@@ -1,3 +1,9 @@
+#!/usr/bin/env node
+
+'use strict';
+
+process.title = 'jsimports';
+
 var esprima = require('esprima');
 var escope = require('escope');
 var fs = require('fs');
