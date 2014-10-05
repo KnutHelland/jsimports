@@ -1,7 +1,6 @@
 # jsimports
 
-This is a node program that analyzes a js source file (and a RequireJS
-project) and auto inserts these lines:
+This is a node program that analyzes a js source file (and a RequireJS project) and auto inserts these lines:
 
 ```js
 define([
@@ -72,7 +71,14 @@ define([
 });
 ```
 
-And this happens very fast and completely automatically.
+This is already really fast (feels like it happens immediately), but there's still lots of things that can be optimized.
+
+## Installing:
+
+```bash
+sudo npm install jsimports -g
+```
+
 
 ## Running:
 
