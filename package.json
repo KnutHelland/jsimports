@@ -1,0 +1,23 @@
+{
+  "name": "jsimports",
+  "version": "0.0.1",
+  "description": "Like goimports for requirejs",
+  "main": "test.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/KnutHelland/jsimports"
+  },
+  "keywords": [
+    "requirejs",
+    "auto-complete"
+  ],
+  "author": "Knut Helland",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/KnutHelland/jsimports/issues"
+  },
+  "homepage": "https://github.com/KnutHelland/jsimports"
+}
