@@ -1,4 +1,4 @@
-var esprima = require('../js-bower-libs/esprima/esprima');
+var esprima = require('esprima');
 var escope = require('escope');
 var fs = require('fs');
 var _ = require('underscore');
