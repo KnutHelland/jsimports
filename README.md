@@ -79,6 +79,29 @@ This is already really fast (feels like it happens immediately), but there's sti
 sudo npm install jsimports -g
 ```
 
+## Configuring
+
+Somwhere in a directory above your source-file, you'll have to place a configuration file with the name `jsimports.json`:
+
+```json
+{
+	"config": "./js/config/config.js",
+	"basePath": "./js/",
+	"excludeDirs": [
+		"lang",
+		"nls"
+	]	
+}
+```
+
+**config**: Path to your requireJS config file (where paths and shims are set up)
+
+**basePath**: Base path to your javascript files
+
+**excludeDirs**: If some directories inside basePath should be ignored
+
+*(all paths should be relative to the jsimports.json file)*
+
 
 ## Running:
 
@@ -86,6 +109,6 @@ sudo npm install jsimports -g
 # This command just prints out the new file
 jsimports MyModule.js
 
-# Ant this command rewrites the MyModule.js file:
+# And this command rewrites the MyModule.js file:
 jsimports MyModule.js -w
 ```

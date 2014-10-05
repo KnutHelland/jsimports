@@ -12,7 +12,7 @@ module.exports = {
 	 * Returns config for file path
 	 */
 	getConfig: function(jsFilePath) {
-		var configName = 'auto-define.json';
+		var configName = 'jsimports.json';
 		var configPath = path.dirname(jsFilePath)+'/'+configName;
 
 		while (!fs.existsSync(configPath)) {
@@ -26,7 +26,7 @@ module.exports = {
 
 		var configs = JSON.parse(fs.readFileSync(configPath));
 		configs.config = path.resolve(path.dirname(configPath), configs.config);
-		configs.baseUrl = path.resolve(path.dirname(configPath), configs.baseUrl);
+		configs.basePath = path.resolve(path.dirname(configPath), configs.basePath);
 		return configs;
 	},
 
@@ -132,7 +132,7 @@ module.exports = {
 	 */
 	getAllModules: function(configs) {
 		var shims = this.getShims(configs.config);
-		var modules = this.getModules(configs.baseUrl, configs.excludeDirs);
+		var modules = this.getModules(configs.basePath, configs.excludeDirs);
 		modules = _.extend(modules, shims);
 		return modules;
 	},
