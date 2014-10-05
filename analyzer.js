@@ -34,7 +34,18 @@ module.exports = {
 	 * Returns true if source tree is a compatible RequireJS module
 	 */
 	isModule: function(sourceTree) {
-		return sourceTree.body[0].expression.callee.name == 'define';
+		if (sourceTree.body) {
+			if (sourceTree.body.length > 0) {
+				if (sourceTree.body[0].expression) {
+					if (sourceTree.body[0].expression.callee) {
+						if (sourceTree.body[0].expression.callee.name) {
+							return sourceTree.body[0].expression.callee.name == 'define';
+						}
+					}
+				}
+			}
+		}
+		return false;		
 	},
 
 	/**
