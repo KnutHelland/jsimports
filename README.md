@@ -1,5 +1,7 @@
 # jsimports
 
+![Build status](https://api.travis-ci.org/KnutHelland/jsimports.svg)
+
 This is a node program that analyzes a js source file (and a RequireJS project) and auto inserts these lines:
 
 ```js

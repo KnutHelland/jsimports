@@ -142,9 +142,11 @@ module.exports = {
 	 * Returns all modules (shims and modules in base path
 	 */
 	getAllModules: function(configs) {
-		var shims = this.getShims(configs.config);
 		var modules = this.getModules(configs.basePath, configs.excludeDirs);
-		modules = _.extend(modules, shims);
+		if (configs.config) {
+			var shims = this.getShims(configs.config);
+			modules = _.extend(modules, shims);
+		}
 		return modules;
 	},
 
