@@ -2,9 +2,12 @@
   "name": "jsimports",
   "version": "0.0.1",
   "description": "Like goimports for requirejs",
-  "main": "test.js",
+  "main": "analyzer.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "goimports": "./cli.js"
   },
   "repository": {
     "type": "git",
