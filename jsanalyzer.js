@@ -1,4 +1,3 @@
-jsimports errors:
 var esprima = require('esprima');
 var escope = require('escope');
 var fs = require('fs');
@@ -448,7 +447,10 @@ Project.prototype.getModules = function() {
 	this.readRequirejsConfig();
 	this.findModules();
 
-	return this.modules;
+	if (!this.modulesFromConfig) {
+		this.modulesFromConfig = {};
+	}
+	return _.extend(this.modules, this.modulesFromConfig);
 };
 
 
