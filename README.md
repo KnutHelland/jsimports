@@ -87,7 +87,7 @@ Somwhere in a directory above your source-file, you'll have to place a configura
 
 ```json
 {
-	"config": "./js/config/config.js",
+	"requirejsConfig": "./js/config/config.js",
 	"basePath": "./js/",
 	"excludeDirs": [
 		"lang",
