@@ -1,5 +1,5 @@
 {
-	"config": "config/config.js",
+	"requirejsConfig": "config/config.js",
 	"basePath": ".",
 	"excludeDirs": [
 

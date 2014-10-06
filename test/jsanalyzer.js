@@ -1,12 +1,12 @@
 var assert = require('assert');
-var jsanalyzer = require("../jsanalyzer")
+var jsimports = require("../jsanalyzer");
 
-describe('jsfile', function(){
-	describe('getTree', function(){
-		it('should return a tree for a valid file', function(){
+describe('File', function() {
+	describe('getTree', function() {
+		it('should return a tree for a valid file', function() {
 			var err = null;
 			try {
-				var file = new jsanalyzer.jsfile(__dirname + '/examples/modules/MyModule.js');
+				var file = new jsimports.File(__dirname + '/examples/modules/MyModule.js');
 				file.getTree();
 			} catch (e) {
 				err = e;
@@ -14,10 +14,10 @@ describe('jsfile', function(){
 			assert.equal(null, err);
 		});
 
-		it('should return error when file is invalid', function(){
+		it('should return error when file is invalid', function() {
 			var err = null;
 			try {
-				var file = new jsanalyzer.jsfile(__dirname + '/examples/modules/MyInvalidJsModule.js');
+				var file = new jsimports.File(__dirname + '/examples/modules/MyInvalidJsModule.js');
 				file.getTree();
 			} catch (e) {
 				err = e;
@@ -27,43 +27,81 @@ describe('jsfile', function(){
 	});
 
 
-	describe('isModule', function(){
-		it('should return true for valid module', function(){
-			var file = new jsanalyzer.jsfile(__dirname + '/examples/modules/MyModule.js');
+	describe('isModule', function() {
+		it('should return true for valid module', function() {
+			var file = new jsimports.File(__dirname + '/examples/modules/MyModule.js');
 			assert.equal(true, file.isModule());
 		});
 
-		it('should return false for non module', function(){
-			var file = new jsanalyzer.jsfile(__dirname + '/jsanalyzer.js');
+		it('should return false for non module', function() {
+			var file = new jsimports.File(__filename);
 			assert.equal(false, file.isModule());
 		});
 	});
 
 
+	describe('getNewDefineSection', function() {
+		it('should return correct on empty list', function() {
+			var file = new jsimports.File;
+			file._resolvedDependencies = [];
+			file._anonymousDependencies = [];
 
-});
-
-
-describe('jsanalyzer', function(){
-	describe('constructor', function() {
-		it('finds and reads config', function() {
-			var analyzer = new jsanalyzer.jsanalyzer(__dirname + '/examples/modules/MyModule.js');
-			assert.equal(true, /config\/config\.js$/.test(analyzer.config.config));
+			assert.equal('define([], function() {', file.getNewDefineSection());
 		});
 
-		it('throws error when config is not present', function() {
-			var error = null;
-			try {
-				var analyzer = new jsanalyzer.jsanalyzer(__filename);
-			} catch (err) {
-				error = err;
-			}
-			assert.equal('ConfigNotFoundError', error.name);
+		it.skip('should return correct on one dependency', function() {
+			var file = new jsimports.File;
+			file._resolvedDependencies = [
+				{ name: 'MyModule', path: 'path/to/MyModule', comment: 'helloworld', module: '' }
+			];
+			file._anonymousDependencies = [];
+
+			assert.equal(
+"define([\
+	'path/to/MyModule' /* helloworld */\
+], function(MyModule) {", file.getNewDefineSection());
 		});
 
-		it('reads requirejs config if present', function() {
-			var analyzer = new jsanalyzer.jsanalyzer(__dirname + '/examples/modules/MyModule.js');
-			assert.equal('jquery', analyzer.modulesFromConfig.$);
+		it.skip('should return correct on two dependencies', function() {
+			var file = new jsimports.File;
+			file._resolvedDependencies = [
+				{ name: '$', path: 'jquery', comment: '', module: '' },
+				{ name: '_', path: 'underscore', comment: '', module: '' }
+			];
+			file._anonymousDependencies = [];
+
+			assert.equal(
+"define([\
+	'jquery',\
+	'underscore'\
+], function($,\
+            _) {", file.getNewDefineSection());
 		});
+
 	});
 });
+
+
+// describe('jsimports', function(){
+// 	describe('constructor', function() {
+// 		it('finds and reads config', function() {
+// 			var analyzer = new jsimports.Project(__dirname + '/examples/modules/MyModule.js');
+// 			assert.equal(true, /config\/config\.js$/.test(analyzer.config.config));
+// 		});
+
+// 		it('throws error when config is not present', function() {
+// 			var error = null;
+// 			try {
+// 				var analyzer = new jsimports.Project(__filename);
+// 			} catch (err) {
+// 				error = err;
+// 			}
+// 			assert.equal('ConfigNotFoundError', error.name);
+// 		});
+
+// 		it('reads requirejs config if present', function() {
+// 			var analyzer = new jsimports.Project(__dirname + '/examples/modules/MyModule.js');
+// 			assert.equal('jquery', analyzer.modulesFromConfig.$);
+// 		});
+// 	});
+// });

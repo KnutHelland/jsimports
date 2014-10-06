@@ -276,6 +276,7 @@ module.exports = {
 			    .difference(this.defaultWindowMethods)
 			    .difference(this.defaultWindowProperties)
 			    .without('define')
+			    .without('require')
 			    .value();
 
 		return modules.concat(unresolved);
@@ -344,6 +345,7 @@ module.exports = {
 			.difference(this.defaultWindowMethods)
 			.difference(this.defaultWindowProperties)
 			.without('define')
+			.without('require')
 			.value();
 	},
 
