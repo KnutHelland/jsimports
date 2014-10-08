@@ -15,6 +15,12 @@ var CONFIG_FILENAME = 'jsimports.json';
  * valid AMD module, it can find dependencies etc.
  */
 function File(pathToFile) {
+	this._project = null;
+
+	if (arguments[1] !== null) {
+		this._project = arguments[1];
+	}
+
 	if (pathToFile) {
 		/**
 		 * Absolute path to the file
@@ -176,6 +182,54 @@ File.prototype.getRealDependencies = function() {
 };
 
 
+File.prototype.getProject = function() {
+	if (this._project == null) {
+		this._project = new Project(this.path);
+	}
+
+	return this._project;
+};
+
+
+/**
+ * Checks wether a dependency is circular
+ */
+File.prototype.isCircular = function(depPath) {
+	var _this = this;
+	var circular = false;
+
+	var list = [this.path];
+	var recursive = function(dep, list) {
+		if (String(dep) == '') {
+			return;
+		}
+
+		var file = _this.getProject().getFile(dep+'.js');
+
+		if (file && file.isModule()) {
+			list = list.concat(file.path);
+
+			if (list.length != _.uniq(list).length) {
+				circular = true;
+				return;
+			}
+			console.log(list);
+
+			var deps = _.values(file.getSpecifiedDependencies());
+			deps = deps.concat(file.getAnonymousDependencies());
+
+			_.each(deps, function(dep) {
+				recursive(dep, list);
+			});
+
+		}
+	};
+	recursive(depPath, list);
+	return circular;
+};
+
+
+
 /**
  * Returns sorted list of dependencies that can be used to create a
  * new define-section.
@@ -185,6 +239,8 @@ File.prototype.getRealDependencies = function() {
  * In addition you should append the anonymous dependencies!
  */
 File.prototype.getResolvedDependencies = function() {
+	var _this = this;
+
 	if (this._resolvedDependencies == null) {
 		var output = [];
 
@@ -192,15 +248,25 @@ File.prototype.getResolvedDependencies = function() {
 
 		// Add all dependencies that we want to keep as original:
 		output = output.concat(_.map(_.pick(this.getSpecifiedDependencies(), deps), function(dep, name) {
-			return { name: name, path: dep, comment: '', plugin: '' };
+			var comment = '';
+			if (_this.isCircular(String(dep))) {
+				comment = 'WARNING: CURCULAR DEPENDENCY';
+			}
+
+			return { name: name, path: dep, comment: comment, plugin: '' };
 		}));
 		deps = _.difference(deps, _.keys(this.getSpecifiedDependencies()));
 
 		// Add other needed modules:
-		var project = new Project(this.path);
+		var project = this.getProject();
 		var availableModules = project.getModules();
 		output = output.concat(_.map(_.pick(availableModules, deps), function(dep, name) {
-			return { name: name, path: dep, comment: '', plugin: '' };
+			var comment = '';
+			if (_this.isCircular(dep)) {
+				comment = 'WARNING: CURCULAR DEPENDENCY';
+			}
+
+			return { name: name, path: dep, comment: comment, plugin: '' };
 		}));
 		deps = _.difference(deps, _.keys(availableModules));
 
@@ -324,7 +390,30 @@ function Project(pathInsideProject) {
 	this.files = {};
 
 	this.path = path.resolve(pathInsideProject);
+	this.readConfig();
 }
+
+
+Project.prototype.getFile = function(pathToFile) {
+	pathToFile = path.resolve(this.config.basePath, pathToFile);
+
+	if (pathToFile.substring(pathToFile.length-2) != 'js') {
+		pathToFile += ".js";
+	}
+
+	if (!this.files[pathToFile]) {
+		try {
+			var file = new File(pathToFile, this);
+			if (file.isModule()) {
+				this.files[pathToFile] = file;
+				return file;
+			}
+		} catch (err) {
+			return false;
+		}
+	}
+	return this.files[pathToFile];		
+};
 
 
 /**
