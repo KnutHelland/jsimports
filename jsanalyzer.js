@@ -171,10 +171,13 @@ File.prototype.getRealDependencies = function() {
 			.difference(ignore)
 			.value();
 
+		var names = _.keys(this.getSpecifiedDependencies());
+
 		this._realDependencies = this._realDependencies.concat(
 			_.chain(this.getScopes()[1].variables)
 				.filter(function(v) { return v.references.length != 0; })
 				.pluck('name')
+				.filter(function(n) { return _.contains(names, n); })
 				.without('arguments')
 				.value());
 	}
@@ -247,7 +250,8 @@ File.prototype.getResolvedDependencies = function() {
 		var deps = this.getRealDependencies();
 
 		// Add all dependencies that we want to keep as original:
-		output = output.concat(_.map(_.pick(this.getSpecifiedDependencies(), deps), function(dep, name) {
+		var nonEmptySpecified = _.reduce(this.getSpecifiedDependencies(), function(out, path, name) { if (path != "") { out[name] = path; } return out; }, {});
+		output = output.concat(_.map(_.pick(nonEmptySpecified, deps), function(dep, name) {
 			var comment = '';
 			if (_this.isCircular(String(dep))) {
 				comment = 'WARNING: CURCULAR DEPENDENCY';
@@ -255,7 +259,7 @@ File.prototype.getResolvedDependencies = function() {
 
 			return { name: name, path: dep, comment: comment, plugin: '' };
 		}));
-		deps = _.difference(deps, _.keys(this.getSpecifiedDependencies()));
+		deps = _.difference(deps, _.keys(nonEmptySpecified));
 
 		// Add other needed modules:
 		var project = this.getProject();
