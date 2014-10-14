@@ -216,7 +216,6 @@ File.prototype.isCircular = function(depPath) {
 				circular = true;
 				return;
 			}
-			console.log(list);
 
 			var deps = _.values(file.getSpecifiedDependencies());
 			deps = deps.concat(file.getAnonymousDependencies());
