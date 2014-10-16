@@ -12,6 +12,11 @@ if (true) {
 	var src = fs.readFileSync(path.resolve(inputFile));
 	var file = new jsimports.File(inputFile);
 
+	if (!file.isModule()) {
+		process.stdout.write('Not a module');
+		process.exit(1);
+	}
+
 	var prepend = file.getNewDefineSection();
 	var output = prepend + String(src).split('{').splice(1).join('{');
 
