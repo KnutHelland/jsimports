@@ -152,6 +152,8 @@ File.prototype.getSpecifiedDependencies = function() {
 				this._anonymousDependencies.push(paths[i]);
 			}
 		}
+
+		this._anonymousDependencies = _.uniq(this._anonymousDependencies);
 	}
 
 	return _.extend({}, this._specifiedDependencies);
@@ -332,6 +334,11 @@ File.prototype.getResolvedDependencies = function() {
 File.prototype.getNewDefineSection = function() {
 	var deps = this.getResolvedDependencies();
 	var anonymous = this.getAnonymousDependencies();
+
+	var depsPaths = _.pluck(deps, 'path');
+	anonymous = _.filter(anonymous, function(ano) {
+		return !_.contains(depsPaths, ano);
+	});
 
 	var prepend = 'define(['+"\n\t";
 	var prepend_ = '], function(';
