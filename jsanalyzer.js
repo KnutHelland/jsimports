@@ -41,6 +41,8 @@ function File(pathToFile) {
 	 */
 	this._tree = null;
 
+	this._plugin = null;
+
 	/**
 	 * Cache of the escope scopes graph. Use getScopes to get the
 	 * graph.
@@ -63,17 +65,25 @@ function File(pathToFile) {
  * Returns true if the file is a AMD module
  */
 File.prototype.isModule = function() {
-	var tree = this.getTree();
+	try {
+		var tree = this.getTree();
 
-	if (tree.body) {
-		if (tree.body.length > 0) {
-			if (tree.body[0].expression) {
-				if (tree.body[0].expression.callee) {
-					if (tree.body[0].expression.callee.name) {
-						return tree.body[0].expression.callee.name == 'define';
+		if (tree.body) {
+			if (tree.body.length > 0) {
+				if (tree.body[0].expression) {
+					if (tree.body[0].expression.callee) {
+						if (tree.body[0].expression.callee.name) {
+							return tree.body[0].expression.callee.name == 'define';
+						}
 					}
 				}
 			}
+		}
+	} catch (err) {
+		if (err.name == 'EsprimaParseError') {
+			return false;
+		} else {
+			throw err;
 		}
 	}
 
@@ -89,7 +99,10 @@ File.prototype.getTree = function() {
 		try {
 			this._tree = esprima.parse(this.src);
 		} catch (err) {
-			throw new Error('Invalid js file (not readable by Esprima). ' + err);
+			throw {
+				name: 'EsprimaParseError',
+				message: 'Invalid js file (not readable by Esprima). ' + err
+			};
 		}
 	}
 
@@ -185,12 +198,44 @@ File.prototype.getRealDependencies = function() {
 };
 
 
+File.prototype.getPath = function() {
+	return this.path;
+};
+
+
 File.prototype.getProject = function() {
 	if (this._project == null) {
 		this._project = new Project(this.path);
 	}
 
 	return this._project;
+};
+
+
+/**
+ * If the file is a plugin type, this function returns the name of the
+ * plugin.
+ */
+File.prototype.isPlugin = function() {
+	if (this._plugin === null) {
+		var config = this.getProject().getConfig();
+		var path = this.getPath();
+
+		for (var plugin in config.plugins) {
+			var ext = config.plugins[plugin];
+
+			if (path.substr(path.length - ext.length) == ext) {
+				this._plugin = plugin;
+				break;
+			}
+		}
+
+		if (this._plugin === null) {
+			this._plugin = false;
+		}
+	}
+
+	return this._plugin;
 };
 
 
@@ -384,38 +429,86 @@ File.prototype.sortFunc = function(dep) {
  * shims.
  */
 function Project(pathInsideProject) {
-	this.config = {
+	this.defaultConfig = {
 		requirejsConfig: null,
 		basePath: null,
 		excludeDirs: []
 	};
 
-	this.files = {};
+	/**
+	 * Cached config
+	 */
+	this._config = null;
 
-	this.path = path.resolve(pathInsideProject);
-	this.readConfig();
+	/**
+	 * Cached list of all files. Keys in the object are resolved
+	 * paths, and values are File objects
+	 */
+	this._files = {};
+
+	/**
+	 * Resolved path to somewhere inside this project
+	 */
+	this._path = path.resolve(pathInsideProject);
+
+	/**
+	 * Modules from requirejs
+	 */
+	this._modulesFromRequirejsConfig = null;
+
+	/**
+	 * All modules in project
+	 */
+	this._modules = null;
 }
 
 
-Project.prototype.getFile = function(pathToFile) {
-	pathToFile = path.resolve(this.config.basePath, pathToFile);
+Project.prototype.resolvePath = function(pathToFile) {
+	var config = this.getConfig();
+	var ext = '.js';
 
-	if (pathToFile.substring(pathToFile.length-2) != 'js') {
-		pathToFile += ".js";
+	var pos = pathToFile.indexOf('!');
+	if (pos != -1) {
+		var parts = pathToFile.split('!');
+		var plugin = parts.shift();
+
+		var plugins = _.keys(config.plugins);
+		if (plugins[plugin]) {
+			ext = plugins[plugin];
+		} else {
+			parts.unshift(plugin);
+		}
+
+		pathToFile = parts.join('!');
 	}
 
-	if (!this.files[pathToFile]) {
+	if (!pathToFile.substr(pathToFile.length - ext.length) == ext){
+		pathToFile += ext;
+	}
+	return path.resolve(config.basePath, pathToFile);
+};
+
+
+/**
+ * Returns a File from the given path.
+ */
+Project.prototype.getFile = function(pathToFile) {
+	var config = this.getConfig();
+
+	pathToFile = this.resolvePath(pathToFile);
+
+	if (!this._files[pathToFile]) {
 		try {
 			var file = new File(pathToFile, this);
-			if (file.isModule()) {
-				this.files[pathToFile] = file;
-				return file;
+			if (file.isModule() || file.isPlugin()) {
+				return this._files[pathToFile] = file;
 			}
 		} catch (err) {
 			return false;
 		}
 	}
-	return this.files[pathToFile];		
+
+	return this._files[pathToFile];		
 };
 
 
@@ -438,14 +531,16 @@ Project.prototype.readConfig = function() {
 
 	try {
 		var config = JSON.parse(fs.readFileSync(configPath));
-		this.config = _.extend(this.config, config);
+		config = _.extend(this.defaultConfig, config);
 
-		if (this.config.requirejsConfig !== null) {
-			this.config.requirejsConfig = path.resolve(path.dirname(configPath), this.config.requirejsConfig);
+		if (config.requirejsConfig !== null) {
+			config.requirejsConfig = path.resolve(path.dirname(configPath), config.requirejsConfig);
 		}
-		if (this.config.basePath !== null) {
-			this.config.basePath = path.resolve(path.dirname(configPath), this.config.basePath);
+		if (config.basePath !== null) {
+			config.basePath = path.resolve(path.dirname(configPath), config.basePath);
 		}
+
+		return config;
 	} catch (err) {
 		throw {
 			name: 'InvalidConfigError',
@@ -455,71 +550,96 @@ Project.prototype.readConfig = function() {
 };
 
 
-/**
- * Returns list of paths and shims from the RequireJS config file
- */
-Project.prototype.readRequirejsConfig = function() {
-	if (this.config.requirejsConfig === null) {
-		return;
-	}
+Project.prototype.getModulesFromRequirejsConfig = function() {
+	if (this._modulesFromRequirejsConfig === null) {
+		var config = this.getConfig();
 
-	var options = {};
-	require.config = function(configObj) {
-		options = configObj;
-	};
-	// THIS MAY BE VERY HARMFUL:
-	eval(fs.readFileSync(this.config.requirejsConfig, 'utf-8'));
-	delete require.config;
-
-	var shims = {};
-
-	for (var lib in options.paths) {
-		shims[lib] = lib;
-	}
-
-	for (var shim in options.shim) {
-		var exports = options.shim[shim].exports;
-		if (exports) {
-			shims[exports] = shim;
+		if (config.requirejsConfig === null) {
+			this._modulesFromRequirejsConfig = {};
+			return {};
 		}
+
+		var options = {};
+		require.config = function(configObj) {
+			options = configObj;
+		};
+		// THIS MAY BE VERY HARMFUL:
+		eval(fs.readFileSync(config.requirejsConfig, 'utf-8'));
+		delete require.config;
+
+		var shims = {};
+
+		for (var lib in options.paths) {
+			shims[lib] = lib;
+		}
+
+		for (var shim in options.shim) {
+			var exports = options.shim[shim].exports;
+			if (exports) {
+				shims[exports] = shim;
+			}
+		}
+
+		this._modulesFromRequirejsConfig = shims;
 	}
 
-	this.modulesFromConfig = shims;
+	return this._modulesFromRequirejsConfig;
 };
 
 
 /**
  * Finds all modules in base path
  */
-Project.prototype.findModules = function() {
+Project.prototype._findModules = function() {
 	var _this = this;
+	var config = this.getConfig();
 	var files = [];
 
-	diveSync(this.config.basePath, function(err, file) {
-		if (/\.js$/.test(file)) {
+	var extensions = ['.js'];
+	extensions = extensions.concat(_.values(config.plugins));
+
+	diveSync(config.basePath, function(err, file) {
+		if (_.any(extensions, function(ext) { return file.substr(file.length - ext.length) == ext; })) {
 			files.push(file);
 		}
 	});
 
 	files = _.filter(files, function(file) {
 		try {
-			file = new File(file);
-			return file.isModule();
+			var f = new File(file);
+			if (f.isModule() || f.isPlugin()) {
+				_this._files[file] = f;
+				return true;
+			}
+			return false;
 		} catch (err) {
 			return false;
 		}
 	});
 
 	files = _.reduce(files, function(files, file) {
+		var ext = '.js';
+		var plugin = false;
+		if (_this._files[file]) {
+			plugin = _this._files[file].isPlugin();
+		}
+		if (plugin) {
+			ext = config.plugins[plugin];
+		}
+
 		var clss = file.split("/").pop();
-		clss = clss.substr(0, clss.length-3);
+		clss = clss.substr(0, clss.length-ext.length);
 
-		var path = file.substr(0, file.length-3);
-		path = path.substr(_this.config.basePath.length + 1);
+		var path = file.substr(0, file.length-ext.length);
+		path = path.substr(config.basePath.length + 1);
 
-		if (!_.any(_this.config.excludeDirs, function(dir) {
+		if (!_.any(config.excludeDirs, function(dir) {
 			return path.indexOf(dir) == 0;
 		})) {
+			if (plugin) {
+				path = plugin+'!'+path;
+			}
+
 			files[clss] = path;
 		}
 
@@ -527,22 +647,34 @@ Project.prototype.findModules = function() {
 	}, {});
 
 	this.files = _.extend(this.files, files);
-	this.modules = files;
+	return files;
 };
 
 
 /**
- * Returns all available modules in project
+ * Returns the project config
+ */
+Project.prototype.getConfig = function() {
+	if (this._config === null) {
+		this._config = this.readConfig();
+	}
+
+	return this._config;
+};
+
+
+/**
+ * Returns all available modules in project. In the returned object,
+ * the keys are module names and values are paths.
  */
 Project.prototype.getModules = function() {
-	this.readConfig();
-	this.readRequirejsConfig();
-	this.findModules();
-
-	if (!this.modulesFromConfig) {
-		this.modulesFromConfig = {};
+	if (this._modules === null) {
+		var config = this.getConfig();
+		var requirejsConfigModules = this.getModulesFromRequirejsConfig();
+		var otherModules = this._findModules();
+		this._modules = _.extend(otherModules, requirejsConfigModules);
 	}
-	return _.extend(this.modules, this.modulesFromConfig);
+	return this._modules;
 };
 
 
