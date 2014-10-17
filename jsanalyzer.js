@@ -61,6 +61,22 @@ function File(pathToFile) {
 };
 
 
+File.prototype.getProjectPath = function() {
+	var project = this.getProject();
+
+	var ext = '.js';
+	var plugin = this.isPlugin();
+	if (plugin) {
+		ext = project.getConfig().plugins[plugin];
+	}
+	
+	var p = this.path.substr(project.getConfig().basePath.length+1);
+	p = p.substr(0, p.length-ext.length);
+	return p;
+};
+
+
+
 /**
  * Returns true if the file is a AMD module
  */
@@ -468,6 +484,8 @@ function Project(pathInsideProject) {
 	 * All modules in project
 	 */
 	this._modules = null;
+
+	this._projectModules = null;
 }
 
 
@@ -490,7 +508,7 @@ Project.prototype.resolvePath = function(pathToFile) {
 		pathToFile = parts.join('!');
 	}
 
-	if (!pathToFile.substr(pathToFile.length - ext.length) == ext){
+	if (pathToFile.substr(pathToFile.length - ext.length) != ext){
 		pathToFile += ext;
 	}
 	return path.resolve(config.basePath, pathToFile);
@@ -498,12 +516,32 @@ Project.prototype.resolvePath = function(pathToFile) {
 
 
 /**
- * Returns a File from the given path.
+ * Returns a File from the given requirejs path
  */
 Project.prototype.getFile = function(pathToFile) {
 	var config = this.getConfig();
 
 	pathToFile = this.resolvePath(pathToFile);
+
+	if (!this._files[pathToFile]) {
+		try {
+			var file = new File(pathToFile, this);
+			if (file.isModule() || file.isPlugin()) {
+				return file;
+			}
+		} catch (err) {
+			return false;
+		}
+	}
+
+	return this._files[pathToFile];		
+};
+
+
+Project.prototype.getFilePhysicalPath = function(pathToFile) {
+	var config = this.getConfig();
+
+	pathToFile = path.resolve(config.basePath, pathToFile);
 
 	if (!this._files[pathToFile]) {
 		try {
@@ -517,7 +555,7 @@ Project.prototype.getFile = function(pathToFile) {
 	}
 
 	return this._files[pathToFile];		
-};
+}
 
 
 /**
@@ -614,7 +652,7 @@ Project.prototype._findModules = function() {
 
 	files = _.filter(files, function(file) {
 		try {
-			var f = new File(file);
+			var f = _this.getFilePhysicalPath(file);
 			if (f.isModule() || f.isPlugin()) {
 				_this._files[file] = f;
 				return true;
@@ -679,10 +717,18 @@ Project.prototype.getModules = function() {
 	if (this._modules === null) {
 		var config = this.getConfig();
 		var requirejsConfigModules = this.getModulesFromRequirejsConfig();
-		var otherModules = this._findModules();
+		var otherModules = this.getProjectModules();
 		this._modules = _.extend(otherModules, requirejsConfigModules);
 	}
 	return this._modules;
+};
+
+
+Project.prototype.getProjectModules = function() {
+	if (this._projectModules === null) {
+		this._projectModules = this._findModules();
+	}
+	return this._projectModules;
 };
 
 

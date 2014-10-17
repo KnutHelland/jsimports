@@ -1,137 +1,137 @@
 #!/usr/bin/env node
 
-if (true) {
 
-	process.title = 'jsimports';
+process.title = 'jsimports';
 
-	var jsimports = require('./jsanalyzer');
-	var path = require('path');
-	var fs = require('fs');
+var jsimports = require('./jsanalyzer');
+var _ = require('underscore');
+var path = require('path');
+var fs = require('fs');
 
-	var inputFile = process.argv[2];
-	var src = fs.readFileSync(path.resolve(inputFile));
-	var file = new jsimports.File(inputFile);
+function print(str) {
+	process.stdout.write(str);
+}
+function println(str) {
+	print(str+"\n");
+}
 
-	if (!file.isModule()) {
-		process.stdout.write('Not a module');
-		process.exit(1);
-	}
-
-	var prepend = file.getNewDefineSection();
-	var output = prepend + String(src).split('{').splice(1).join('{');
-
-	if (process.argv[3] == '-w') {
-		if (String(output) != String(file)) {
-			fs.writeFileSync(path.resolve(inputFile), output);
+var commands = {
+	
+	default: function(args) {
+		var inputFile = path.resolve(args[0]);
+		var stats = fs.statSync(inputFile);
+		if (stats.isDirectory()) {
+			commands.directory(args);
+			process.exit(0);
 		}
-		process.exit(0);
-	} else {
-		process.stdout.write(output);
-	}
 
-} else {
+		if (!stats.isFile()) {
+			println('File not found');
+			process.exit(1);
+		}
 
-	process.title = 'jsimports';
+		var src = fs.readFileSync(inputFile);
+		var file = new jsimports.File(inputFile);
 
-	var esprima = require('esprima');
-	var escope = require('escope');
-	var fs = require('fs');
-	var path = require('path');
-	var _ = require('underscore');
-	var analyzer = require('./analyzer');
-	var diveSync = require('diveSync');
+		if (!file.isModule()) {
+			print('Not a module');
+			process.exit(1);
+		}
 
-	var inputFile = path.resolve(process.argv[2]);
-	var configs = analyzer.getConfig(inputFile);
+		var prepend = file.getNewDefineSection();
+		var output = prepend + String(src).split('{').splice(1).join('{');
 
-
-	// var src = fs.readFileSync(inputFile);
-	// var unused = analyzer.getUnused(src);
-	// var unresolved = analyzer.getUnresolved(src);
-	// var resolved = analyzer.getResolved(src);
-
-	// console.log(inputFile);
-	// console.log("Unused:     ", unused.join(', '));
-	// console.log("Unresolved: ", unresolved.join(', '));
-	// console.log('Resolved:   ', resolved);
-	// console.log();
-	// console.log("From: " + String(src).split('{')[0]+'{');
-	// console.log("To: " + analyzer.getNewDefineSection(src, inputFile+'ølk', configs));
-	// console.log();
-	// console.log();
-	// console.log();
-	// console.log();
+		if (process.argv[3] == '-w') {
+			if (String(output) != String(file)) {
+				fs.writeFileSync(path.resolve(inputFile), output);
+			}
+			process.exit(0);
+		} else {
+			print(output);
+		}
+	},
 
 
-	// process.exit(0);
+	stats: function(args) {
+		var project = new jsimports.Project(args[0]);
+		project.getProjectModules();
+
+		var getDependents = function(file, indent) {
+			var deps = [];
+
+			var tab = '';
+			for (var i = 0; i < indent; i++) tab += ' ';
+
+			_.each(project._files, function(f) {
+				if (f.isModule()) {
+					try {
+						var deps = _.pluck(f.getResolvedDependencies(), 'path');
+						deps = deps.concat(f.getAnonymousDependencies());
+						if (_.contains(deps, file.getProjectPath())) {
+							console.log(tab + f.getProjectPath());
+							// getDependents(f, indent+4);
+						}
+
+					} catch (err) {
+
+					}
+				}
+			});
+
+			return deps;
+		};
+
+		var file = project.getFilePhysicalPath(args[0]);
+		getDependents(file, 4);
+
+	},
 
 
+	directory: function(args) {
+		var project = new jsimports.Project(args[0]);
+		var modules = project.getProjectModules();
 
-	if (fs.lstatSync(inputFile).isDirectory()) {
+		_.each(modules, function(path, name) {
 
-		// Analyze directory
-		console.log('Analyze directory ' + inputFile);
+			var file = project.getFile(path);
+			if (!file) {
+				// console.log('Something wrong with', path);
+			} else if (file.isModule()) {
 
-		var files = [];
-		diveSync(inputFile, function(err, file) {
-			if (analyzer.endsWith(file, '.js')) {
+				var prepend = file.getNewDefineSection();
+				var output = prepend + String(file.src).split('{').splice(1).join('{');
 
-				if (analyzer.isModule(analyzer.getSourceTree(fs.readFileSync(file)))) {
-					files.push(file);
+				if (args[1] == '-w') {
+					if (String(output) != String(file)) {
+						fs.writeFileSync(file.path, output);
+					}
+				} else {
+					if (String(file.src).split('{')[0]+'{' != file.getNewDefineSection()) {
+						console.log('NO', path);
+					} else {
+						console.log('OK', path);
+					}
 				}
 			}
+
 		});
+	},
 
-		_.each(files, function(file) {
-			var src = fs.readFileSync(file);
-			var unused = analyzer.getUnused(src);
-			var unresolved = analyzer.getUnresolved(src);
-			var resolved = analyzer.getResolved(src);
-
-			if (unused.length + unresolved.length > 0) {
-				console.log(file);
-				console.log("Unused:     ", unused.join(', '));
-				console.log("Unresolved: ", unresolved.join(', '));
-				console.log('Resolved:   ', resolved);
-				console.log();
-				console.log("From: " + String(src).split('{')[0]+'{');
-				console.log("To: " + analyzer.getNewDefineSection(src, configs));
-				console.log();
-				console.log();
-				console.log();
-				console.log();
-			} else {
-				console.log(file);
-				console.log('OK!');
-				console.log();
-			}
-		});
-
-		process.exit(0);
+	mv: function(args) {
+		println('mv command not implemented yet...');
 	}
-	var file = fs.readFileSync(inputFile);
+};
 
 
 
-	// console.log('Needs:');
-	// console.log(analyzer.getUnresolved(file));
-
-	// console.log('Can remove:');
-	// console.log(analyzer.getUnused(file));
-
-	// console.log(analyzer.getShims('config/config.js'));
-	// console.log(analyzer.getModules('./', excludeDirs));
-	// console.log(analyzer.getDeps(file));
-
-	var prepend = analyzer.getNewDefineSection(file, configs);
-	var output = prepend + String(file).split('{').splice(1).join('{');
-
-	if (process.argv[3] == '-w') {
-		if (String(output) != String(file)) {
-			fs.writeFileSync(inputFile, output);
-		}
+//
+// Main
+//
+for (var cmd in commands) {
+	if (process.argv[2] == cmd) {
+		commands[cmd](process.argv.slice(3));
 		process.exit(0);
-	} else {
-		process.stdout.write(output);
 	}
 }
+// or default:
+commands.default(process.argv.slice(2));
