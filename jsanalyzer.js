@@ -524,7 +524,7 @@ Project.prototype.getFile = function(pathToFile) {
  * Tries to find config file and read it and extend this.config
  */
 Project.prototype.readConfig = function() {
-	var configPath = path.dirname(this.path)+'/'+CONFIG_FILENAME;
+	var configPath = path.dirname(this._path)+'/'+CONFIG_FILENAME;
 
 	while (!fs.existsSync(configPath)) {
 		if (path.dirname(configPath) == '/') {
