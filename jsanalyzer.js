@@ -439,7 +439,8 @@ function Project(pathInsideProject) {
 	this.defaultConfig = {
 		requirejsConfig: null,
 		basePath: null,
-		excludeDirs: []
+		excludeDirs: [],
+		plugins: {}
 	};
 
 	/**
