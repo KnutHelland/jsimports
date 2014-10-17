@@ -30,6 +30,7 @@
     "underscore": "^1.7.0"
   },
   "devDependencies": {
+    "circular-json": "^0.1.6",
     "mocha": "^1.21.4"
   }
 }
