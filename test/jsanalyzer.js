@@ -2,6 +2,22 @@ var assert = require('assert');
 var jsimports = require("../jsanalyzer");
 
 describe('File', function() {
+	describe('getConfig', function() {
+		it('should find config even when jsimports is called from outside project', function(done) {
+			var exec = require('child_process').exec;
+
+			var opts = {
+				cwd: '/'
+			};
+
+			exec('node '+__dirname+'/../cli.js '+__dirname+'/examples/modules/MyModule.js', opts, function (error, stdout, stderr) {
+				assert.equal(error, null);
+				done();
+			});
+		});
+	});
+
+
 	describe('getTree', function() {
 		it('should return a tree for a valid file', function() {
 			var err = null;
