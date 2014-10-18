@@ -7,7 +7,6 @@ var CircularJSON = require('circular-json');
 var esprima = require('esprima');
 var escope = require('escope');
 var diveSync = require('diveSync');
-var Lazy = require('lazy');
 
 
 describe('assertConfig', function() {
