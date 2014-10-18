@@ -486,6 +486,11 @@ function Project(pathInsideProject) {
 	this._modules = null;
 
 	this._projectModules = null;
+
+	/**
+	 * Keeps track of all files in the project
+	 */
+	this._projectFiles = null;
 }
 
 
@@ -724,11 +729,83 @@ Project.prototype.getModules = function() {
 };
 
 
+
+/**
+ * Returns all modules in the project
+ */
 Project.prototype.getProjectModules = function() {
 	if (this._projectModules === null) {
 		this._projectModules = this._findModules();
 	}
 	return this._projectModules;
+};
+
+
+
+/**
+ * @todo finish this
+ */
+Project.prototype.getProjectFiles = function() {
+	if (this._projectFiles === null) {
+		var _this = this;
+		var config = this.getConfig();
+		var files = [];
+
+		var extensions = ['.js'];
+		extensions = extensions.concat(_.values(config.plugins));
+
+		diveSync(config.basePath, function(err, file) {
+			if (_.any(extensions, function(ext) { return file.substr(file.length - ext.length) == ext; })) {
+				files.push(file);
+			}
+		});
+
+		files = _.filter(files, function(file) {
+			try {
+				var f = _this.getFilePhysicalPath(file);
+				if (f.isModule() || f.isPlugin()) {
+					_this._files[file] = f;
+					return true;
+				}
+				return false;
+			} catch (err) {
+				return false;
+			}
+		});
+
+		files = _.reduce(files, function(files, file) {
+			var ext = '.js';
+			var plugin = false;
+			if (_this._files[file]) {
+				plugin = _this._files[file].isPlugin();
+			}
+			if (plugin) {
+				ext = config.plugins[plugin];
+			}
+
+			var clss = file.split("/").pop();
+			clss = clss.substr(0, clss.length-ext.length);
+
+			var path = file.substr(0, file.length-ext.length);
+			path = path.substr(config.basePath.length + 1);
+
+			if (!_.any(config.excludeDirs, function(dir) {
+				return path.indexOf(dir) == 0;
+			})) {
+				if (plugin) {
+					path = plugin+'!'+path;
+				}
+
+				files[clss] = path;
+			}
+
+			return files;
+		}, {});
+
+		this.files = _.extend(this.files, files);
+		this._projectFiles = files;
+	}
+	return this._projectFiles;
 };
 
 
