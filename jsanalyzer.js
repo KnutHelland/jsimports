@@ -26,7 +26,7 @@ function File(pathToFile) {
 		 * Absolute path to the file
 		 */
 		this.path = path.resolve(pathToFile);
-		
+
 		/**
 		 * Contents (source code) of the file
 		 */
@@ -69,7 +69,7 @@ File.prototype.getProjectPath = function() {
 	if (plugin) {
 		ext = project.getConfig().plugins[plugin];
 	}
-	
+
 	var p = this.path.substr(project.getConfig().basePath.length+1);
 	p = p.substr(0, p.length-ext.length);
 	return p;
@@ -83,27 +83,35 @@ File.prototype.getProjectPath = function() {
 File.prototype.isModule = function() {
 	try {
 		var tree = this.getTree();
-
-		if (tree.body) {
-			if (tree.body.length > 0) {
-				if (tree.body[0].expression) {
-					if (tree.body[0].expression.callee) {
-						if (tree.body[0].expression.callee.name) {
-							return tree.body[0].expression.callee.name == 'define';
-						}
-					}
-				}
-			}
-		}
+		// console.log(JSON.stringify(tree));
+		return true;
 	} catch (err) {
-		if (err.name == 'EsprimaParseError') {
-			return false;
-		} else {
-			throw err;
-		}
+		console.log(err);
 	}
-
 	return false;
+	// try {
+	// 	var tree = this.getTree();
+	//
+	// 	if (tree.body) {
+	// 		if (tree.body.length > 0) {
+	// 			if (tree.body[0].expression) {
+	// 				if (tree.body[0].expression.callee) {
+	// 					if (tree.body[0].expression.callee.name) {
+	// 						return tree.body[0].expression.callee.name == 'define';
+	// 					}
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// } catch (err) {
+	// 	if (err.name == 'EsprimaParseError') {
+	// 		return false;
+	// 	} else {
+	// 		throw err;
+	// 	}
+	// }
+	//
+	// return false;
 };
 
 
@@ -113,7 +121,7 @@ File.prototype.isModule = function() {
 File.prototype.getTree = function() {
 	if (this._tree == null) {
 		try {
-			this._tree = esprima.parse(this.src);
+			this._tree = esprima.parse(this.src, { tolerant: true });
 		} catch (err) {
 			throw {
 				name: 'EsprimaParseError',
@@ -132,7 +140,7 @@ File.prototype.getTree = function() {
 File.prototype.getScopes = function() {
 	if (this._scopes == null) {
 		var tree = this.getTree();
-		this._scopes = escope.analyze(tree).scopes;
+		this._scopes = escope.analyze(tree, { ecmaVersion: 6, sourceType: 'module' }).scopes;
 	}
 
 	return this._scopes;
@@ -384,7 +392,7 @@ File.prototype.getNewDefineSection = function() {
 		if (dep.comment) {
 			comment = ' /* '+dep.comment+' */';
 		}
-		
+
 		prepend += "'"+ dep.path +"'"+comment+",\n\t";
 		prepend_ += dep.name + ",\n            ";
 	});
@@ -399,7 +407,7 @@ File.prototype.getNewDefineSection = function() {
 			prepend += "'"+ dep +"',\n\t";
 		});
 	}
-	
+
 	if (deps.length == 0 && anonymous.length == 0) {
 		prepend = 'define([], function() {';
 	} else {
@@ -539,7 +547,7 @@ Project.prototype.getFile = function(pathToFile) {
 		}
 	}
 
-	return this._files[pathToFile];		
+	return this._files[pathToFile];
 };
 
 
@@ -559,7 +567,7 @@ Project.prototype.getFilePhysicalPath = function(pathToFile) {
 		}
 	}
 
-	return this._files[pathToFile];		
+	return this._files[pathToFile];
 }
 
 

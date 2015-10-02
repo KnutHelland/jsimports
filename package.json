@@ -25,8 +25,8 @@
   "homepage": "https://github.com/KnutHelland/jsimports",
   "dependencies": {
     "diveSync": "^0.2.1",
-    "escope": "^1.0.1",
-    "esprima": "^1.2.2",
+    "escope": "^3.1.0",
+    "esprima": "^2.4.0",
     "underscore": "^1.7.0"
   },
   "devDependencies": {

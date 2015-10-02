@@ -1,0 +1,9 @@
+{
+	"basePath": "./",
+
+	"excludeDirs": [],
+
+	"plugins": {
+		"hbs": ".hbs"
+	}
+}

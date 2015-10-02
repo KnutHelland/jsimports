@@ -45,7 +45,7 @@ module.exports = {
 				}
 			}
 		}
-		return false;		
+		return false;
 	},
 
 	/**
@@ -189,7 +189,7 @@ module.exports = {
 		var prepend_ = '], function(';
 
 		var depLines = [];
-		
+
 		_.each(deps, function(dep) {
 			if (modules[dep]) {
 				depLines.push({ name: dep, path: modules[dep] });
@@ -250,7 +250,7 @@ module.exports = {
 		if (tree == false) {
 			return null;
 		}
-		
+
 		if (!this.isModule(tree)) {
 			console.log('File is not a AMD module');
 			return false;
