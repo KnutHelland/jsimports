@@ -1,8 +1,14 @@
-import test from "heisann";
-import "somethingElse";
+const babylon = require('babylon');
 
-// export function MyFunc() {
-//
-// };
-let myVar = 15;
-export default myVar;
+const output = babylon.parse('import myVar from "hello";', {
+	sourceType: 'module',
+
+	plugin: [
+		'asyncFunctions',
+		'jsx',
+		'flow',
+	],
+});
+
+
+console.log(output.tokens);

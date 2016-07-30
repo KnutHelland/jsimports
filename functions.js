@@ -15,10 +15,10 @@ function assertConfig(config, params) {
 	var missing = _.difference(params, _.keys(config));
 
 	if (missing.length > 0) {
-		throw {
+		throw new Error({
 			name: 'MissingConfig',
 			message: 'Config object misses parameters ' + missing.join(', ')
-		};
+		});
 	}
 }
 
@@ -236,5 +236,3 @@ module.exports = {
 	getRealDependencies: getRealDependencies,
 	findFilesInProject: findFilesInProject
 };
-
-
